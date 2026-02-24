@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>SNAP! MAP</title>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Dela+Gothic+One&family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+:root {
+  --yellow: #FFE600;
+  --pink:   #FF3CAC;
+  --cyan:   #00F0FF;
+  --lightblue:   #2d96d7d4;
+  --black:  #111;
+  --white:  #FAFAFA;
+  --green:  #A8D878;
+  --lightgreen:  #2fae7c;
+  --green-dark: #6BAF3C;
+  --border: 3px solid var(--black);
+  --sh:     5px 5px 0 var(--black);
+  --sh-lg:  8px 8px 0 var(--black);
+  --map-base:  #D4EDBA;
+  --map-hover: #0084ffdc;
+  --map-shot:  #A8D878;
+  --map-active:#ff0090;
+  --sakura: #e4389a;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--white);
+  color: var(--black);
+  font-family: 'M PLUS Rounded 1c', sans-serif;
+  overflow-x: hidden;
+}
+::-webkit-scrollbar { width:6px; }
+::-webkit-scrollbar-track { background: var(--lightgreen); }
+::-webkit-scrollbar-thumb { background: var(--black); }
+
+/* halftone */
+body::before {
+  content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
+  background-image: radial-gradient(circle, rgba(0,0,0,0.08) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* ─── HEADER ─── */
+header {
+  position: sticky; top:0; z-index:200;
+  background: var(--lightblue);
+  border-bottom: var(--border);
+  height: 56px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 clamp(1rem,4vw,2rem);
+}
+.logo {
+  font-family: 'Bangers', cursive;
+  font-size: clamp(1.5rem,4vw,2rem);
+  letter-spacing: 0.1em;
+  color: var(--black);
+  text-decoration: none;
+  display: flex; align-items: center; gap: 6px;
+}
+.logo-pip {
+  width: 10px; height: 10px;
+  background: var(--pink);
+  border-radius: 50%;
+  border: 2px solid var(--black);
+  margin-bottom: 3px;
+  flex-shrink: 0;
+}
+.tab-nav {
+  display: flex; gap: 0;
+}
+.tab-btn {
+  font-family: 'Dela Gothic One', cursive;
+  font-size: clamp(0.6rem,1.8vw,0.75rem);
+  letter-spacing: 0.1em;
+  padding: 6px 14px;
+  border: 2px solid var(--black);
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-left: -2px;
+}
+.tab-btn.active { background: var(--lightblue); color: var(--black); }
+.tab-btn:not(.active):hover { background: rgba(0,0,0,0.06); }
+
+/* ─── SECTIONS ─── */
+.section { display: none; }
+.section.active { display: block; }
+
+/* ─── JAPAN LAYOUT ─── */
+.japan-wrap {
+  display: grid;
+  grid-template-columns: 1fr;
+  position: relative;
+}
+@media(min-width:900px){
+  .japan-wrap { grid-template-columns: 1fr 340px; }
+}
+
+/* MAP */
+.map-col {
+  background: #EDF7E0;
+  border-bottom: var(--border);
+  padding: clamp(1rem,2vw,1.5rem);
+  position: relative;
+}
+@media(min-width:900px){
+  .map-col { border-right: var(--border); border-bottom: none; }
+}
+
+.map-hint {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--lightblue);
+  border: var(--border);
+  box-shadow: var(--sh);
+  padding: 7px 12px;
+  margin-bottom: 10px;
+  font-family: 'Dela Gothic One', cursive;
+  font-size: clamp(0.6rem,1.6vw,0.72rem);
+  letter-spacing: 0.06em;
+}
+.legend {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  margin-bottom: 10px;
+}
+.leg { display:flex; align-items:center; gap:5px; font-size:0.62rem; font-weight:700; letter-spacing:0.08em; }
+.leg-sw { width:14px; height:14px; border:2px solid var(--black); flex-shrink:0; }
+
+#japan-svg {
+  width: 100%; height: auto; display: block;
+  filter: drop-shadow(2px 3px 0 rgba(0,0,0,0.1));
+}
+.pref-path {
+  fill: var(--map-base);
+  stroke: var(--black); stroke-width:1.2; stroke-linejoin:round;
+  cursor: pointer;
+  transition: fill 0.12s ease;
+}
+.pref-path:hover { fill: var(--lightgreen); }
+.pref-path.has-photo { fill: var(--map-shot); }
+.pref-path.active { fill: var(--map-active) !important; stroke-width:2.5; }
+
+/* tooltip */
+#tip {
+  position: fixed;
+  background: var(--lightgreen); color: var(--black);
+  font-family: 'Dela Gothic One', cursive;
+  font-size: 0.72rem; letter-spacing:0.08em;
+  padding: 4px 10px;
+  border: 2px solid var(--black);
+  box-shadow: 3px 3px 0 var(--black);
+  pointer-events: none; z-index:9999;
+  display: none; white-space: nowrap;
+}
+
+/* SIDE PANEL */
+.info-col {
+  padding: clamp(1rem,2vw,1.5rem);
+  display: flex; flex-direction: column; gap: 1rem;
+}
+@media(min-width:900px){
+  .info-col {
+    position: sticky; top: 56px;
+    max-height: calc(100svh - 56px);
+    overflow-y: auto;
+  }
+}
+
+/* default state */
+.panel-idle {
+  background: var(--lightblue);
+  border: var(--border); box-shadow: var(--sh);
+  padding: 1.8rem 1.5rem; text-align: center;
+}
+.panel-idle-icon { font-size: 2.8rem; display:block; margin-bottom:.5rem;
+  animation: rock 2.5s ease infinite; }
+@keyframes rock { 0%,100%{transform:rotate(-6deg)} 50%{transform:rotate(6deg)} }
+.panel-idle p { font-family:'Dela Gothic One',cursive; font-size:clamp(.85rem,2.2vw,1rem); letter-spacing:.05em; line-height:1.65; }
+
+/* photo card */
+.photo-card {
+  border: var(--border); box-shadow: var(--sh-lg);
+  overflow: hidden; background: var(--white);
+  display: none;
+  animation: popIn .35s cubic-bezier(.34,1.56,.64,1) forwards;
+}
+.photo-card.show { display: block; }
+@keyframes popIn {
+  from { transform: scale(.84) rotate(-2.5deg); opacity:0; }
+  to   { transform: scale(1) rotate(-.4deg); opacity:1; }
+}
+
+.card-img-area {
+  width:100%; aspect-ratio:16/10;
+  display:flex; align-items:center; justify-content:center;
+  border-bottom: var(--border);
+  font-family:'Dela Gothic One',cursive;
+  font-size:clamp(.65rem,1.8vw,.8rem);
+  letter-spacing:.1em; color:rgba(255,255,255,.3);
+  position: relative; overflow:hidden;
+}
+.card-img-area img {
+  position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+}
+
+.no-photo-placeholder {
+  width:100%; aspect-ratio:16/10;
+  background: repeating-linear-gradient(45deg,#e0e0e0 0,#e0e0e0 8px,#eee 8px,#eee 16px);
+  border-bottom: var(--border);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.5rem;
+}
+.no-photo-placeholder .cam { font-size:2.2rem; opacity:.35; }
+.no-photo-placeholder span { font-family:'Dela Gothic One',cursive; font-size:.72rem; letter-spacing:.1em; color:rgba(0,0,0,.3); }
+.card-body { padding: 1rem; }
+.card-location {
+  display:inline-flex; align-items:center; gap:5px;
+  background: var(--white); border:2px solid var(--white); box-shadow:2px 2px 0 var(--white);
+  padding:2px 10px; margin-bottom:.7rem;
+  font-family:'Dela Gothic One',cursive; font-size:.62rem; letter-spacing:.1em;
+}
+.card-title { font-family:'Dela Gothic One',cursive; font-size:clamp(1rem,2.8vw,1.3rem); letter-spacing:.03em; margin-bottom:.5rem; line-height:1.3; }
+.card-desc { font-size:.78rem; line-height:1.9; color:#444; border-left:4px solid var(--lightgreen); padding-left:.7rem; margin-bottom:.8rem; }
+.card-chips { display:flex; flex-wrap:wrap; gap:.35rem; }
+.chip { background:var(--black); color:var(--lightgreen); font-family:'Dela Gothic One',cursive; font-size:.58rem; letter-spacing:.1em; padding:3px 8px; }
+
+/* prefecture list */
+.pref-list-box { border:var(--border); box-shadow:var(--sh); overflow:hidden; }
+.pref-list-hd { background:var(--black); color:var(--lightgreen); font-family:'Dela Gothic One',cursive; font-size:.68rem; letter-spacing:.15em; padding:9px 13px; }
+.pref-list { max-height:260px; overflow-y:auto; scrollbar-width:thin; }
+.pref-row {
+  display:flex; align-items:center; gap:8px;
+  padding:8px 13px; border-bottom:2px solid #eee;
+  cursor:pointer; background:var(--white);
+  font-family:'Dela Gothic One',cursive; font-size:.72rem; letter-spacing:.04em;
+  transition:background .12s;
+}
+.pref-row:last-child { border-bottom:none; }
+.pref-row:hover,.pref-row.active { background:var(--lightgreen); }
+.pref-dot { width:9px; height:9px; border-radius:50%; border:2px solid var(--black); flex-shrink:0; }
+.pref-dot.shot { background:var(--map-shot); }
+.pref-dot.none { background:var(--map-base); }
+.pref-region { margin-left:auto; font-size:.55rem; color:#999; letter-spacing:.08em; flex-shrink:0; }
+
+/* ─── OVERSEAS SECTION ─── */
+.overseas-wrap {
+  padding: clamp(1.5rem,4vw,3rem) clamp(1rem,4vw,2.5rem);
+}
+
+.overseas-header {
+  display: flex; align-items: center; gap: 1rem;
+  margin-bottom: 1.8rem;
+}
+.overseas-title {
+  font-family: 'Bangers', cursive;
+  font-size: clamp(2rem,6vw,4rem);
+  letter-spacing: .06em; line-height:1;
+}
+.overseas-count-tag {
+  background: var(--pink); color: var(--white);
+  font-family: 'Dela Gothic One', cursive;
+  font-size: clamp(.6rem,1.5vw,.75rem); letter-spacing:.1em;
+  padding: 4px 12px; border:2px solid var(--black); box-shadow:3px 3px 0 var(--black);
+  white-space: nowrap; flex-shrink:0;
+}
+
+/* overseas grid */
+.overseas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+  gap: 1.2rem;
+}
+
+.ov-card {
+  border: var(--border); box-shadow: var(--sh);
+  background: var(--white); overflow:hidden;
+  cursor: pointer;
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.ov-card:hover { transform:translate(-3px,-3px); box-shadow: var(--sh-lg); }
+
+.ov-card-img {
+  width:100%; aspect-ratio:3/2;
+  display:flex; align-items:center; justify-content:center;
+  border-bottom:var(--border);
+  font-family:'Dela Gothic One',cursive; font-size:clamp(.6rem,1.5vw,.75rem);
+  letter-spacing:.1em; color:rgba(255,255,255,.28);
+  position:relative; overflow:hidden;
+}
+.ov-card-img img {
+  position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+}
+
+.ov-card-body { padding: .85rem; }
+.ov-country-tag {
+  display:inline-flex; align-items:center; gap:4px;
+  background:var(--cyan); border:2px solid var(--black); box-shadow:2px 2px 0 var(--black);
+  padding:2px 8px; margin-bottom:.55rem;
+  font-family:'Dela Gothic One',cursive; font-size:.6rem; letter-spacing:.1em;
+}
+.ov-card-title {
+  font-family:'Dela Gothic One',cursive;
+  font-size:clamp(.9rem,2.2vw,1.05rem); letter-spacing:.03em; margin-bottom:.4rem; line-height:1.3;
+}
+.ov-card-desc { font-size:.75rem; line-height:1.85; color:#555; margin-bottom:.6rem; }
+.ov-chips { display:flex; flex-wrap:wrap; gap:.3rem; }
+.ov-chip { background:var(--black); color:var(--yellow); font-family:'Dela Gothic One',cursive; font-size:.56rem; letter-spacing:.1em; padding:2px 7px; }
+
+/* add card */
+.ov-add-card {
+  border: 3px dashed rgba(0,0,0,.25);
+  aspect-ratio: unset;
+  display: flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  gap:.6rem;
+  padding: 2.5rem 1rem;
+  cursor: pointer; background: transparent;
+  transition: background .15s, border-color .15s;
+  min-height: 200px;
+}
+.ov-add-card:hover { background:var(--yellow); border-color:var(--black); border-style:solid; box-shadow:var(--sh); }
+.ov-add-card .plus { font-family:'Bangers',cursive; font-size:3rem; color:rgba(0,0,0,.2); line-height:1; }
+.ov-add-card span { font-family:'Dela Gothic One',cursive; font-size:.72rem; letter-spacing:.1em; color:rgba(0,0,0,.35); }
+
+/* ─── MODAL ─── */
+.modal-bg {
+  position:fixed; inset:0; z-index:1000;
+  background:rgba(0,0,0,.7);
+  display:none; align-items:flex-end; justify-content:center;
+}
+.modal-bg.open { display:flex; }
+.modal-sheet {
+  background:var(--white); width:100%; max-width:520px;
+  border-top:var(--border); border-left:var(--border); border-right:var(--border);
+  max-height:88svh; overflow-y:auto;
+  animation: sheetUp .32s cubic-bezier(.22,1,.36,1) forwards;
+}
+@keyframes sheetUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+.modal-bar { display:flex; justify-content:center; padding:.7rem 0 .3rem; }
+.modal-bar-inner { width:38px; height:4px; background:#ccc; border-radius:2px; }
+.modal-close-btn {
+  width:100%; padding:12px; border:none; border-top:var(--border);
+  background:var(--black); color:var(--white);
+  font-family:'Dela Gothic One',cursive; font-size:.72rem; letter-spacing:.1em;
+  cursor:pointer;
+}
+
+/* ─── FOOTER ─── */
+footer {
+  background:var(--lightblue); border-top:var(--border);
+  padding:1.2rem clamp(1rem,3vw,2rem);
+  display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:.8rem;
+}
+.footer-logo { font-family:'Bangers',cursive; font-size:1.6rem; letter-spacing:.1em; color:var(--black); text-decoration:none; }
+.footer-copy { font-size:.6rem; font-weight:700; letter-spacing:.12em; color:rgba(0,0,0,.4); }
+
+.slider-nav {
+  display: flex; align-items: center; gap: .6rem;
+  margin-bottom: .7rem;
+}
+.slider-btn {
+  background: var(--white); color: var(--sakura);
+  font-family: 'Dela Gothic One', cursive;
+  font-size: .8rem; padding: 3px 10px;
+  border: 2px solid var(--white);
+  box-shadow: 2px 2px 0 var(--white);
+  cursor: pointer;
+}
+.slider-count {
+  font-family: 'Dela Gothic One', cursive;
+  font-size: .65rem; letter-spacing: .1em;
+  color: rgba(0,0,0,.45);
+}
+</style>
+</head>
+<body>
+
+<div id="tip"></div>
+
+<!-- ─── HEADER ─── -->
+<header>
+  <a class="logo" href="#"><span>SNAP</span><div class="logo-pip"></div><span>MAP</span></a>
+  <div class="tab-nav">
+    <button class="tab-btn active" data-tab="japan">🗾 日本</button>
+    <button class="tab-btn" data-tab="overseas">🌍 海外</button>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════
+     TAB: JAPAN
+═══════════════════════════════════ -->
+<div class="section active" id="tab-japan">
+  <div class="japan-wrap">
+
+    <!-- MAP -->
+    <div class="map-col">
+      <div class="map-hint">👆 都道府県をクリックして写真を見る</div>
+      <div class="legend">
+        <div class="leg"><div class="leg-sw" style="background:var(--map-shot)"></div>撮影済み</div>
+        <div class="leg"><div class="leg-sw" style="background:var(--map-base)"></div>未撮影</div>
+        <div class="leg"><div class="leg-sw" style="background:var(--map-active)"></div>選択中</div>
+      </div>
+
+      <svg id="japan-svg" viewBox="0 0 550 740" xmlns="http://www.w3.org/2000/svg" aria-label="日本地図">
+
+        <!-- HOKKAIDO -->
+        <path class="pref-path" id="p-hokkaido" data-name="北海道(Hokkaido)" data-region="北海道"
+          d="M290,22 L310,18 L340,20 L375,28 L405,38 L430,52 L448,68 L452,85 L445,100
+             L430,112 L415,118 L400,115 L388,122 L372,128 L355,122 L340,112 L325,108
+             L308,115 L295,110 L282,98 L278,82 L282,65 L275,50 Z
+             M458,70 L472,65 L485,72 L488,85 L478,92 L465,88 Z
+             M245,58 L260,54 L270,62 L268,75 L255,78 L245,70 Z"/>
+
+        <!-- TOHOKU -->
+        <path class="pref-path" id="p-aomori" data-name="青森(Aomori)" data-region="東北(Tohoku)"
+          d="M318,128 L338,122 L355,128 L362,142 L355,158 L338,165 L320,160 L310,148 L312,135 Z"/>
+        <path class="pref-path" id="p-iwate" data-name="岩手(Iwate)" data-region="東北(Tohoku)"
+          d="M338,165 L355,160 L368,165 L372,182 L368,200 L355,210 L338,208 L328,195 L325,178 Z"/>
+        <path class="pref-path has-photo" id="p-miyagi" data-name="宮城(Miyagi)" data-region="東北(Tohoku)"
+          d="M338,208 L355,210 L362,222 L358,238 L342,242 L328,235 L325,220 Z"/>
+        <path class="pref-path has-photo" id="p-akita" data-name="秋田(Akita)" data-region="東北(Tohoku)"
+          d="M308,148 L322,142 L328,155 L325,172 L318,185 L305,188 L295,178 L292,162 L298,150 Z"/>
+        <path class="pref-path" id="p-yamagata" data-name="山形(Yamagata)" data-region="東北(Tohoku)"
+          d="M295,188 L308,185 L318,195 L318,212 L310,225 L295,228 L282,218 L280,202 Z"/>
+        <path class="pref-path" id="p-fukushima" data-name="福島(Fukushima)" data-region="東北(Tohoku)"
+          d="M282,228 L298,224 L315,228 L325,238 L322,255 L305,262 L285,258 L272,245 L275,232 Z"/>
+
+        <!-- KANTO -->
+        <path class="pref-path" id="p-ibaraki" data-name="茨城(Ibaraki)" data-region="関東(Kanto)"
+          d="M328,255 L342,252 L352,260 L355,278 L345,290 L330,288 L320,275 L320,262 Z"/>
+        <path class="pref-path" id="p-tochigi" data-name="栃木(Tochigi)" data-region="関東(Kanto)"
+          d="M305,245 L320,242 L328,255 L322,268 L308,272 L295,262 L295,250 Z"/>
+        <path class="pref-path" id="p-gunma" data-name="群馬(Gunma)" data-region="関東(Kanto)"
+          d="M285,240 L302,238 L308,250 L302,262 L288,265 L275,255 L275,242 Z"/>
+        <path class="pref-path" id="p-saitama" data-name="埼玉(Saitama)" data-region="関東(Kanto)"
+          d="M295,265 L308,262 L318,272 L315,282 L300,285 L288,278 L288,268 Z"/>
+        <path class="pref-path has-photo" id="p-tokyo" data-name="東京(Tokyo)" data-region="関東(Kanto)"
+          d="M300,285 L315,282 L322,292 L315,302 L302,302 L292,295 Z"/>
+        <path class="pref-path" id="p-kanagawa" data-name="神奈川(Kanagawa)" data-region="関東(Kanto)"
+          d="M292,302 L308,300 L318,310 L312,322 L298,325 L285,315 L285,305 Z"/>
+        <path class="pref-path" id="p-chiba" data-name="千葉(Chiba)" data-region="関東(Kanto)"
+          d="M322,275 L338,272 L350,280 L355,295 L348,312 L332,318 L318,310 L315,295 L318,280 Z"/>
+
+        <!-- CHUBU -->
+        <path class="pref-path" id="p-niigata" data-name="新潟(Niigata)" data-region="中部(Chubu)"
+          d="M258,215 L278,210 L288,220 L288,238 L278,248 L262,252 L248,242 L245,228 L250,218 Z"/>
+        <path class="pref-path" id="p-toyama" data-name="富山(Toyama)" data-region="中部(Chubu)"
+          d="M245,252 L260,248 L270,258 L268,270 L255,275 L242,268 L240,258 Z"/>
+        <path class="pref-path" id="p-ishikawa" data-name="石川(Ishikawa)" data-region="中部(Chubu)"
+          d="M225,248 L240,244 L248,255 L245,270 L232,275 L220,268 L218,255 Z
+             M205,268 L218,265 L222,278 L212,285 L200,278 Z"/>
+        <path class="pref-path" id="p-fukui" data-name="福井(Fukui)" data-region="中部(Chubu)"
+          d="M218,278 L232,275 L238,288 L230,298 L215,295 L210,283 Z"/>
+        <path class="pref-path" id="p-yamanashi" data-name="山梨(Yamanashi)" data-region="中部(Chubu)"
+          d="M285,272 L298,268 L305,280 L298,292 L282,292 L275,280 Z"/>
+        <path class="pref-path" id="p-nagano" data-name="長野(Nagano)" data-region="中部(Chubu)"
+          d="M260,258 L278,252 L288,265 L285,282 L272,292 L258,288 L248,275 L248,262 Z"/>
+        <path class="pref-path" id="p-gifu" data-name="岐阜(Gifu)" data-region="中部(Chubu)"
+          d="M240,278 L258,272 L268,282 L265,298 L250,305 L235,298 L232,285 Z"/>
+        <path class="pref-path has-photo" id="p-shizuoka" data-name="静岡(Shizuoka)" data-region="中部(Chubu)"
+          d="M275,295 L292,292 L305,302 L305,318 L290,328 L272,322 L262,308 L265,298 Z"/>
+        <path class="pref-path" id="p-aichi" data-name="愛知(Aichi)" data-region="中部(Chubu)"
+          d="M248,308 L265,305 L275,315 L272,330 L255,335 L240,325 L238,312 Z"/>
+        <path class="pref-path" id="p-mie" data-name="三重(Mie)" data-region="中部(Chubu)"
+          d="M238,325 L255,320 L265,332 L260,350 L242,355 L228,342 L228,330 Z"/>
+
+        <!-- KINKI -->
+        <path class="pref-path" id="p-shiga" data-name="滋賀(Shiga)" data-region="近畿(Kinki)"
+          d="M225,298 L240,295 L248,308 L240,320 L225,320 L215,310 L215,300 Z"/>
+        <path class="pref-path" id="p-kyoto" data-name="京都(Kyoto)" data-region="近畿(Kinki)"
+          d="M205,288 L222,285 L232,298 L228,312 L212,315 L200,305 L200,292 Z"/>
+        <path class="pref-path" id="p-osaka" data-name="大阪(Osaka)" data-region="近畿(Kinki)"
+          d="M212,318 L228,315 L235,328 L225,338 L210,335 L205,322 Z"/>
+        <path class="pref-path has-photo" id="p-hyogo" data-name="兵庫(Hyogo)" data-region="近畿(Kinki)"
+          d="M185,295 L205,290 L215,305 L210,322 L195,328 L178,318 L175,305 Z"/>
+        <path class="pref-path" id="p-nara" data-name="奈良(Nara)" data-region="近畿(Kinki)"
+          d="M215,332 L232,328 L240,342 L232,355 L215,355 L205,342 L208,332 Z"/>
+        <path class="pref-path" id="p-wakayama" data-name="和歌山(Wakayama)" data-region="近畿(Kinki)"
+          d="M210,355 L228,350 L235,365 L225,378 L208,375 L198,360 L202,352 Z"/>
+
+        <!-- CHUGOKU -->
+        <path class="pref-path" id="p-tottori" data-name="鳥取(Tottori)" data-region="中国(Chugoku)"
+          d="M170,298 L188,295 L198,308 L192,320 L175,322 L162,312 L162,300 Z"/>
+        <path class="pref-path" id="p-shimane" data-name="島根(Shimane)" data-region="中国(Chugoku)"
+          d="M140,308 L162,305 L172,318 L165,332 L145,335 L128,322 L128,312 Z
+             M108,302 L122,300 L128,310 L120,318 L108,315 Z"/>
+        <path class="pref-path has-photo" id="p-okayama" data-name="岡山(Okayama)" data-region="中国(Chugoku)"
+          d="M175,322 L195,320 L202,335 L195,348 L175,350 L162,338 L162,325 Z"/>
+        <path class="pref-path has-photo" id="p-hiroshima" data-name="広島(Hiroshima)" data-region="中国(Chugoku)"
+          d="M148,328 L168,325 L178,340 L172,355 L150,358 L135,344 L135,332 Z"/>
+        <path class="pref-path has-photo" id="p-yamaguchi" data-name="山口(Yamaguchi)" data-region="中国(Chugoku)"
+          d="M118,338 L140,335 L150,350 L142,365 L120,368 L105,352 L108,340 Z"/>
+
+        <!-- SHIKOKU -->
+        <path class="pref-path" id="p-tokushima" data-name="徳島(Tokushima)" data-region="四国(Shikoku)"
+          d="M195,352 L212,350 L218,365 L208,378 L192,375 L185,360 Z"/>
+        <path class="pref-path has-photo" id="p-kagawa" data-name="香川(Kagawa)" data-region="四国(Shikoku)"
+          d="M175,342 L195,340 L200,353 L188,360 L172,358 L168,347 Z"/>
+        <path class="pref-path" id="p-ehime" data-name="愛媛(Ehime)" data-region="四国(Shikoku)"
+          d="M155,352 L175,348 L182,362 L175,378 L155,380 L142,366 L142,355 Z"/>
+        <path class="pref-path" id="p-kochi" data-name="高知(Kochi)" data-region="四国(Shikoku)"
+          d="M148,372 L175,368 L188,382 L180,398 L155,402 L135,388 L135,375 Z"/>
+
+        <!-- KYUSHU -->
+        <path class="pref-path has-photo" id="p-fukuoka" data-name="福岡(Fukuoka)" data-region="九州(Kyusyu)"
+          d="M108,352 L128,348 L138,362 L128,375 L108,378 L95,364 L95,355 Z"/>
+        <path class="pref-path" id="p-saga" data-name="佐賀(Saga)" data-region="九州(Kyusyu)"
+          d="M85,360 L105,356 L112,370 L102,382 L85,382 L75,370 Z"/>
+        <path class="pref-path" id="p-nagasaki" data-name="長崎(Nagasaki)" data-region="九州(Kyusyu)"
+          d="M65,368 L85,365 L92,380 L82,395 L62,395 L50,380 L55,368 Z
+             M38,385 L52,382 L55,395 L45,402 L35,395 Z"/>
+        <path class="pref-path" id="p-kumamoto" data-name="熊本(Kumamoto)" data-region="九州(Kyusyu)"
+          d="M95,378 L115,375 L125,390 L118,408 L95,412 L78,398 L80,382 Z"/>
+        <path class="pref-path" id="p-oita" data-name="大分(Oita)" data-region="九州(Kyusyu)"
+          d="M120,368 L142,365 L150,380 L140,395 L120,398 L108,385 L108,372 Z"/>
+        <path class="pref-path" id="p-miyazaki" data-name="宮崎(Miyazaki)" data-region="九州(Kyusyu)"
+          d="M122,398 L142,395 L150,412 L140,432 L118,435 L105,418 L108,402 Z"/>
+        <path class="pref-path" id="p-kagoshima" data-name="鹿児島(Kagoshima)" data-region="九州(Kyusyu)"
+          d="M88,412 L115,408 L125,425 L115,445 L88,448 L72,432 L72,415 Z
+             M60,448 L75,445 L80,460 L68,468 L55,460 Z
+             M80,465 L95,462 L100,478 L85,485 L72,475 Z"/>
+
+        <!-- OKINAWA -->
+        <rect x="30" y="605" width="130" height="82" rx="5" fill="#EDF7E0" stroke="#111" stroke-width="2"/>
+        <text x="95" y="622" font-family="'Dela Gothic One',cursive" font-size="8.5" text-anchor="middle" fill="#888" letter-spacing="0.1em">OKINAWA / 沖縄</text>
+        <path class="pref-path" id="p-okinawa" data-name="沖縄(Okinawa)" data-region="沖縄(Okinawa)"
+          d="M45,630 L68,627 L78,638 L72,652 L50,655 L38,643 Z"/>
+        <path class="pref-path" d="M82,632 L98,630 L105,640 L98,650 L82,650 L75,640 Z" data-name="沖縄諸島(Okinawasyoto Islands)" fill="#C8E6C9" stroke="#111" stroke-width="1"/>
+        <path class="pref-path" d="M110,628 L125,626 L130,636 L124,645 L110,644 L104,635 Z" data-name="八重山諸島(Yaezimashoto Islands)" fill="#C8E6C9" stroke="#111" stroke-width="1"/>
+        <text x="95" y="674" font-family="'M PLUS Rounded 1c',sans-serif" font-size="7.5" text-anchor="middle" fill="#bbb" font-weight="700">※位置・縮尺は略図</text>
+
+        <!-- sea labels -->
+        <text x="112" y="218" font-family="'Dela Gothic One',cursive" font-size="12" fill="rgba(30,100,200,0.12)" text-anchor="middle" transform="rotate(-22,112,218)">日本海</text>
+        <text x="430" y="320" font-family="'Dela Gothic One',cursive" font-size="12" fill="rgba(30,100,200,0.12)" text-anchor="middle" transform="rotate(-10,430,320)">太平洋</text>
+        <text x="190" y="430" font-family="'Dela Gothic One',cursive" font-size="10" fill="rgba(30,100,200,0.1)" text-anchor="middle">瀬戸内海</text>
+      </svg>
+    </div><!-- /map-col -->
+
+    <!-- INFO PANEL (desktop only) -->
+    <div class="info-col" id="info-col">
+      <div class="panel-idle" id="panel-idle">
+        <span class="panel-idle-icon">🗾</span>
+        <p>都道府県をクリックして<br>写真を確認できます</p>
+      </div>
+      <div class="photo-card" id="desktop-card">
+        <div class="card-img-area" id="dc-img">YOUR PHOTO HERE</div>
+        <div class="card-body">
+          <div class="card-location" id="dc-loc">📍</div>
+          <h2 class="card-title" id="dc-title"></h2>
+          <p class="card-desc" id="dc-desc"></p>
+          <div class="card-chips" id="dc-chips"></div>
+        </div>
+      </div>
+      <div class="pref-list-box">
+        <div class="pref-list-hd">都道府県リスト</div>
+        <div class="pref-list" id="pref-list"></div>
+      </div>
+    </div>
+
+  </div>
+</div><!-- /tab-japan -->
+
+<!-- ═══════════════════════════════════
+     TAB: OVERSEAS
+═══════════════════════════════════ -->
+<div class="section" id="tab-overseas">
+  <div class="overseas-wrap">
+    <div class="overseas-header">
+      <h2 class="overseas-title">海外</h2>
+      <div class="overseas-count-tag" id="ov-count-tag">📸 4か国</div>
+    </div>
+    <div class="overseas-grid" id="overseas-grid">
+      <!-- filled by JS -->
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <a class="footer-logo" href="#">SNAP! MAP</a>
+  <p class="footer-copy">© 2026 — All photos reserved</p>
+</footer>
+
+<!-- MOBILE MODAL -->
+<div class="modal-bg" id="modal-bg">
+  <div class="modal-sheet">
+    <div class="modal-bar"><div class="modal-bar-inner"></div></div>
+    <div id="modal-inner"></div>
+    <button class="modal-close-btn" id="modal-close">✕ 閉じる</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════
+// JAPAN DATA
+// ══════════════════
+const jpData = {
+  akita:[  // { } → [ ] に変える
+  {
+    title:'西馬音内(Nishimonai)',
+    desc:'生まれた場所。<br>Where I was born.',
+    chips:['8月','09:03 PM','70-350mm f/4.5-6.3'],
+    img:'tohoku/盆踊り踊り子.jpg',
+  },
+  {
+    title:'西馬音内小学校(Nishimonai elementary school)',
+    desc:'出身小学校(The elementary school I went to.)',
+    chips:['4月','03:54 PM','70-350mm f/4.5-6.3'],
+    img:'tohoku/西馬音内小.jpg',
+  },
+],
+　
+  miyagi:[
+  {
+    title:'福浦橋(Fukuura Bridge)',
+    desc:'全長252mの朱塗りの橋。別名「出会い橋」と呼ばれ、渡ると良縁に恵まれるパワースポットとして人気。<br>A vermilion bridge with a total length of 252m. Also known as the "Meeting Bridge", it is popular as a power spot blessed with good relationships when you cross it.',
+    chips:['11月','01:54 PM','70-350mm f/4.5-6.3'],
+    img:'tohoku/福浦橋.jpg',
+   },
+   {
+    title:'福浦島(Fukuura Islands)',
+    desc:'宮城県松島湾に浮かぶ面積約6ヘクタールの県立自然公園で、島全体が自然植物園となっている。<br>It is a prefectural natural park with an area of about 6 hectares floating in Matsushima Bay, Miyagi Prefecture, and the entire island is a natural botanical garden.',
+    chips:['11月','02:34 PM','70-350mm f/4.5-6.3'],
+    img:'tohoku/福浦島.jpg', 
+   },
+  ],
+
+  
+  tokyo:[
+     {
+    title:'東京タワー(Tokyo tower)',
+    desc:'高台から見下ろす東京の夜。無数の光が川のように流れる。',
+    chips:['12月','22:00','50mm f/1.8'],
+    img:'kanto/東京タワー.jpg',
+  },
+],
+  shizuoka:[
+     {
+    title:'紅富士の夜明け',
+    desc:'冬の夜明け前、赤く染まる富士山。逆さ富士が完璧な対称を描く。',
+    chips:['2月','05:48 AM','85mm f/5.6'],
+    img:'tyubu/富士山飛行機.jpg',
+  },
+],
+  
+  hiroshima:[
+     {
+    title:'鳥居と夕暮れ',
+    desc:'宮島・厳島神社の大鳥居。夕日を背負って海の中に立つ朱色の鳥居。',
+    chips:['8月','18:45','24mm f/8'],
+    img:'tyugoku/厳島神社正面.jpg',
+  },
+],
+};
+
+const ALL_PREFS = [
+  {id:'hokkaido',name:'北海道',region:'北海道'},
+  {id:'aomori',name:'青森',region:'東北'},{id:'iwate',name:'岩手',region:'東北'},
+  {id:'miyagi',name:'宮城',region:'東北'},{id:'akita',name:'秋田',region:'東北'},
+  {id:'yamagata',name:'山形',region:'東北'},{id:'fukushima',name:'福島',region:'東北'},
+  {id:'ibaraki',name:'茨城',region:'関東'},{id:'tochigi',name:'栃木',region:'関東'},
+  {id:'gunma',name:'群馬',region:'関東'},{id:'saitama',name:'埼玉',region:'関東'},
+  {id:'chiba',name:'千葉',region:'関東'},{id:'tokyo',name:'東京',region:'関東'},
+  {id:'kanagawa',name:'神奈川',region:'関東'},
+  {id:'niigata',name:'新潟',region:'中部'},{id:'toyama',name:'富山',region:'中部'},
+  {id:'ishikawa',name:'石川',region:'中部'},{id:'fukui',name:'福井',region:'中部'},
+  {id:'yamanashi',name:'山梨',region:'中部'},{id:'nagano',name:'長野',region:'中部'},
+  {id:'gifu',name:'岐阜',region:'中部'},{id:'shizuoka',name:'静岡',region:'中部'},
+  {id:'aichi',name:'愛知',region:'中部'},{id:'mie',name:'三重',region:'中部'},
+  {id:'shiga',name:'滋賀',region:'近畿'},{id:'kyoto',name:'京都',region:'近畿'},
+  {id:'osaka',name:'大阪',region:'近畿'},{id:'hyogo',name:'兵庫',region:'近畿'},
+  {id:'nara',name:'奈良',region:'近畿'},{id:'wakayama',name:'和歌山',region:'近畿'},
+  {id:'tottori',name:'鳥取',region:'中国'},{id:'shimane',name:'島根',region:'中国'},
+  {id:'okayama',name:'岡山',region:'中国'},{id:'hiroshima',name:'広島',region:'中国'},
+  {id:'yamaguchi',name:'山口',region:'中国'},
+  {id:'tokushima',name:'徳島',region:'四国'},{id:'kagawa',name:'香川',region:'四国'},
+  {id:'ehime',name:'愛媛',region:'四国'},{id:'kochi',name:'高知',region:'四国'},
+  {id:'fukuoka',name:'福岡',region:'九州'},{id:'saga',name:'佐賀',region:'九州'},
+  {id:'nagasaki',name:'長崎',region:'九州'},{id:'kumamoto',name:'熊本',region:'九州'},
+  {id:'oita',name:'大分',region:'九州'},{id:'miyazaki',name:'宮崎',region:'九州'},
+  {id:'kagoshima',name:'鹿児島',region:'九州'},{id:'okinawa',name:'沖縄',region:'沖縄'},
+];
+
+// ══════════════════
+// OVERSEAS DATA
+// ══════════════════
+const ovData = [
+  {
+    country:'アイスランド', flag:'🇮🇸', region:'ヨーロッパ',
+    title:'オーロラの夜',
+    desc:'氷河の上に広がる緑のカーテン。零下20度の中、息を呑む光景が広がった。',
+    chips:['2月','23:30','14mm f/1.8'],
+    grad:'linear-gradient(135deg,#020818,#0a2a1a,#0d4a2a,#1a8a50)',
+  },
+  {
+    country:'モロッコ', flag:'🇲🇦', region:'アフリカ',
+    title:'砂漠の夕暮れ',
+    desc:'サハラ砂漠の砂丘に沈む夕日。オレンジに染まる砂の波が果てしなく続く。',
+    chips:['11月','17:55','50mm f/2.8'],
+    grad:'linear-gradient(135deg,#2a0a00,#8B3A00,#D4700A,#FFB830)',
+  },
+  {
+    country:'ニュージーランド', flag:'🇳🇿', region:'オセアニア',
+    title:'ミルキーウェイ',
+    desc:'南半球の星空はとにかく濃い。天の川が地面まで降りてきそうな密度だった。',
+    chips:['4月','01:20','24mm f/1.4'],
+    grad:'linear-gradient(135deg,#05050f,#0a0a2a,#1a1a5a,#3030a0)',
+  },
+  {
+    country:'ノルウェー', flag:'🇳🇴', region:'ヨーロッパ',
+    title:'フィヨルドの夜明け',
+    desc:'切り立つ崖の間に差し込む朝の光。鏡のような水面に映る空が息をのむ美しさ。',
+    chips:['6月','04:30','35mm f/5.6'],
+    grad:'linear-gradient(135deg,#0a1520,#1a3550,#3a6590,#70a0d0)',
+  },
+];
+
+// ══════════════════
+// BUILD PREF LIST
+// ══════════════════
+const prefListEl = document.getElementById('pref-list');
+ALL_PREFS.forEach(p => {
+  const has = !!jpData[p.id];
+  const row = document.createElement('div');
+  row.className = 'pref-row';
+  row.dataset.id = p.id;
+  row.innerHTML = `<div class="pref-dot ${has?'shot':'none'}"></div>${p.name}<span class="pref-region">${p.region}</span>`;
+  row.addEventListener('click', () => selectJP(p.id));
+  prefListEl.appendChild(row);
+});
+
+// ══════════════════
+// JAPAN INTERACTION
+// ══════════════════
+const tip = document.getElementById('tip');
+let activeJP = null;
+
+let activeIdx = 0;
+
+function buildCardHTML(id, idx) {
+  const photos = jpData[id];
+  const prefInfo = ALL_PREFS.find(p => p.id === id) || {};
+  const name = prefInfo.name || id;
+  const region = prefInfo.region || '';
+
+  if (!photos) {
+    return `
+      <div class="no-photo-placeholder">
+        <span class="cam">📷</span>
+        <span>まだ撮影していません</span>
+      </div>
+      <div class="card-body">
+        <div class="card-location">📍 ${name}</div>
+        <h2 class="card-title">${name} — 未撮影</h2>
+        <p class="card-desc">写真はまだありません。</p>
+      </div>`;
+  }
+
+  const d = photos[idx];
+  const total = photos.length;
+  const nav = total > 1 ? `
+    <div class="slider-nav">
+      <button class="slider-btn" onclick="slidePhoto('${id}', ${idx - 1})">←</button>
+      <span class="slider-count">${idx + 1} / ${total}</span>
+      <button class="slider-btn" onclick="slidePhoto('${id}', ${idx + 1})">→</button>
+    </div>` : '';
+
+  return `
+    <div class="card-img-area"><img src="${d.img}" alt="${d.title}"></div>
+    <div class="card-body">
+      <div class="card-location">📍 ${name} <span style="font-size:.55rem;opacity:.55;margin-left:4px">${region}</span></div>
+      ${nav}
+      <h2 class="card-title">${d.title}</h2>
+      <p class="card-desc">${d.desc}</p>
+      <div class="card-chips">${d.chips.map(c => `<span class="chip">${c}</span>`).join('')}</div>
+    </div>`;
+}
+
+function slidePhoto(id, idx) {
+  activeIdx = (idx + jpData[id].length) % jpData[id].length;
+  renderCard(id);
+}
+
+function renderCard(id) {
+  const html = buildCardHTML(id, activeIdx);
+  if (window.innerWidth < 900) {
+    document.getElementById('modal-inner').innerHTML = html;
+  } else {
+    const card = document.getElementById('desktop-card');
+    card.innerHTML = html;
+    card.classList.add('show');
+  }
+}
+
+function selectJP(id) {
+  activeJP = id;
+  activeIdx = 0;
+
+  document.querySelectorAll('.pref-path').forEach(el => el.classList.remove('active'));
+  const path = document.getElementById('p-' + id);
+  if (path) path.classList.add('active');
+
+  document.querySelectorAll('.pref-row').forEach(r => r.classList.remove('active'));
+  const row = document.querySelector(`.pref-row[data-id="${id}"]`);
+  if (row) { row.classList.add('active'); row.scrollIntoView({ block: 'nearest' }); }
+
+  if (window.innerWidth < 900) {
+    document.getElementById('modal-inner').innerHTML = buildCardHTML(id, 0);
+    document.getElementById('modal-bg').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  } else {
+    document.getElementById('panel-idle').style.display = 'none';
+    const card = document.getElementById('desktop-card');
+    card.classList.remove('show'); void card.offsetWidth;
+    card.innerHTML = buildCardHTML(id, 0);
+    card.classList.add('show');
+  }
+}
+
+// map events
+document.querySelectorAll('.pref-path').forEach(path => {
+  const id = (path.id||'').replace('p-','');
+  const rawName = path.dataset.name;
+
+  path.addEventListener('click', () => { if(id) selectJP(id); });
+
+  path.addEventListener('mouseenter', e => {
+    if(!rawName) return;
+    const has = jpData[id];
+    tip.textContent = rawName + (has ? ' 📸' : '');
+    tip.style.display = 'block';
+  });
+  path.addEventListener('mousemove', e => {
+    tip.style.left = (e.clientX+14)+'px';
+    tip.style.top  = (e.clientY-36)+'px';
+  });
+  path.addEventListener('mouseleave', () => { tip.style.display='none'; });
+
+  path.setAttribute('tabindex','0');
+  path.setAttribute('role','button');
+  path.addEventListener('keydown', e => {
+    if(e.key==='Enter'||e.key===' ') { e.preventDefault(); if(id) selectJP(id); }
+  });
+});
+
+// ══════════════════
+// BUILD OVERSEAS
+// ══════════════════
+const grid = document.getElementById('overseas-grid');
+const countries = new Set(ovData.map(d=>d.country));
+document.getElementById('ov-count-tag').textContent = `📸 ${countries.size}か国`;
+
+ovData.forEach(d => {
+  const card = document.createElement('div');
+  card.className = 'ov-card';
+  card.innerHTML = `
+    <div class="ov-card-img" style="background:${d.grad}">YOUR PHOTO HERE</div>
+    <div class="ov-card-body">
+      <div class="ov-country-tag">${d.flag} ${d.country} <span style="font-size:.52rem;opacity:.6;margin-left:4px">${d.region}</span></div>
+      <h3 class="ov-card-title">${d.title}</h3>
+      <p class="ov-card-desc">${d.desc}</p>
+      <div class="ov-chips">${d.chips.map(c=>`<span class="ov-chip">${c}</span>`).join('')}</div>
+    </div>`;
+  grid.appendChild(card);
+});
+
+// add placeholder
+const addCard = document.createElement('div');
+addCard.className = 'ov-add-card';
+addCard.innerHTML = `<span class="plus">+</span><span>写真を追加する</span>`;
+grid.appendChild(addCard);
+
+// ══════════════════
+// TABS
+// ══════════════════
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ══════════════════
+// MODAL CLOSE
+// ══════════════════
+function closeModal() {
+  document.getElementById('modal-bg').classList.remove('open');
+  document.body.style.overflow='';
+}
+document.getElementById('modal-close').addEventListener('click', closeModal);
+document.getElementById('modal-bg').addEventListener('click', e => {
+  if(e.target===document.getElementById('modal-bg')) closeModal();
+});
+</script>
+</body>
+</html>
