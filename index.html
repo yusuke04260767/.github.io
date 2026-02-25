@@ -1080,7 +1080,7 @@ document.querySelectorAll('.pref-path').forEach(path => {
 // ══════════════════
 const grid = document.getElementById('overseas-grid');
 const countries = new Set(ovData.map(d=>d.country));
-document.getElementById('ov-count-tag').textContent = `📸 ${countries.size}か国`;
+document.getElementById('ov-count-tag').textContent = `📸 ???か国`;
 
 ovData.forEach(d => {
   const card = document.createElement('div');
@@ -1128,6 +1128,7 @@ document.getElementById('modal-bg').addEventListener('click', e => {
 </script>
 </body>
 </html>
+
 
 
 
