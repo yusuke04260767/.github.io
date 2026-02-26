@@ -365,10 +365,26 @@ footer {
 .slider-btn {
   background: var(--white); color: var(--sakura);
   font-family: 'Dela Gothic One', cursive;
-  font-size: .8rem; padding: 3px 10px;
+  font-size: .8rem; padding: 2px 5px;
   border: 2px solid var(--white);
   box-shadow: 2px 2px 0 var(--white);
   cursor: pointer;
+}
+
+/* ← ボタン：画像の中央下部より左 */
+.img-prev {
+  position: absolute;
+  bottom: 10px;
+  left: calc(50% - 40px);
+  transform: translateX(-50%);
+}
+
+/* → ボタン：画像の中央下部より右 */
+.img-next {
+  position: absolute;
+  bottom: 10px;
+  left: calc(50% + 40px);
+  transform: translateX(-50%);
 }
 .slider-count {
   font-family: 'Dela Gothic One', cursive;
@@ -853,7 +869,8 @@ const jpData = {
     title:'栗林公園の主(carps)',
     desc:'---<br>---',
     chips:['2月','00:08 PM','70-350mm f/4.5-6.3'],
-    img:'images/shikoku/栗林公園鯉複数.JPG',
+    imgs:'images/shikoku/栗林公園鯉複数.JPG',
+    imgs:'images/shikoku/栗林公園鯉.JPG',
   },
     {
     title:'栗林公園の和舟(Japanese boat)',
@@ -990,6 +1007,8 @@ function buildCardHTML(id, idx) {
 
   const d = photos[idx];
   const total = photos.length;
+
+  // 県内カード切り替えボタン
   const nav = total > 1 ? `
     <div class="slider-nav">
       <button class="slider-btn" onclick="slidePhoto('${id}', ${idx - 1})">←</button>
@@ -997,8 +1016,19 @@ function buildCardHTML(id, idx) {
       <button class="slider-btn" onclick="slidePhoto('${id}', ${idx + 1})">→</button>
     </div>` : '';
 
+  // 1タイトル内の複数画像ボタン
+  const imgs = d.imgs || [d.img];
+  const totalImgs = imgs.length;
+  const imgNav = totalImgs > 1 ? `
+    <button class="slider-btn img-prev" onclick="slidePic(this, -1)">←</button>
+    <button class="slider-btn img-next" onclick="slidePic(this, 1)">→</button>
+    <span class="slide-count-badge">1 / ${totalImgs}</span>` : '';
+
   return `
-    <div class="card-img-area"><img src="${d.img}" alt="${d.title}"></div>
+    <div class="card-img-area" data-imgs='${JSON.stringify(imgs)}' data-pic-idx="0">
+      <img src="${imgs[0]}" alt="${d.title}">
+      ${imgNav}
+    </div>
     <div class="card-body">
       <div class="card-location">📍 ${name} <span style="font-size:.55rem;opacity:.55;margin-left:4px">${region}</span></div>
       ${nav}
@@ -1011,6 +1041,16 @@ function buildCardHTML(id, idx) {
 function slidePhoto(id, idx) {
   activeIdx = (idx + jpData[id].length) % jpData[id].length;
   renderCard(id);
+}
+
+function slidePic(btn, dir) {
+  const area = btn.closest('.card-img-area');
+  const imgs = JSON.parse(area.dataset.imgs);
+  let idx = parseInt(area.dataset.picIdx) + dir;
+  idx = (idx + imgs.length) % imgs.length;
+  area.dataset.picIdx = idx;
+  area.querySelector('img').src = imgs[idx];
+  area.querySelector('.slide-count-badge').textContent = `${idx + 1} / ${imgs.length}`;
 }
 
 function renderCard(id) {
@@ -1128,6 +1168,27 @@ document.getElementById('modal-bg').addEventListener('click', e => {
 </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
