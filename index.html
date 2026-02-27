@@ -448,7 +448,7 @@ footer {
         <!-- TOHOKU -->
         <path class="pref-path" id="p-aomori" data-name="青森(Aomori)" data-region="東北(Tohoku)"
           d="M318,128 L338,122 L355,128 L362,142 L355,158 L338,165 L320,160 L310,148 L312,135 Z"/>
-        <path class="pref-path" id="p-iwate" data-name="岩手(Iwate)" data-region="東北(Tohoku)"
+        <path class="pref-path　has-photo" id="p-iwate" data-name="岩手(Iwate)" data-region="東北(Tohoku)"
           d="M338,165 L355,160 L368,165 L372,182 L368,200 L355,210 L338,208 L328,195 L325,178 Z"/>
         <path class="pref-path has-photo" id="p-miyagi" data-name="宮城(Miyagi)" data-region="東北(Tohoku)"
           d="M338,208 L355,210 L362,222 L358,238 L342,242 L328,235 L325,220 Z"/>
@@ -634,15 +634,41 @@ const jpData = {
     title:'西馬音内(Nishimonai)',
     desc:'生まれた場所。盆踊りが有名。<br>Where I was born.Famous for Bon Odori.',
     chips:['8月','09:03 PM','70-350mm f/4.5-6.3'],
-    img:'images/tohoku/盆踊り踊り子.JPG',
-  },
-  {
-    title:'西馬音内小学校(Nishimonai elementary school)',
-    desc:'出身小学校(The elementary school I went to.)',
-    chips:['4月','03:54 PM','70-350mm f/4.5-6.3'],
-    img:'images/tohoku/西馬音内小.JPG',
-  },
+    imgs:[
+      'images/tohoku/盆踊り踊り子.JPG',
+      'images/tohoku/西馬音内小.JPG',
+      'images/tohoku/盆踊り囃子と踊り子.JPG',
+      'images/tohoku/羽後町カップ麺.JPG',
+      'images/tohoku/西馬音内桜.JPG',
+      'images/tohoku/西馬音内光ブレ.JPG',
+      'images/tohoku/西馬音内雲.JPG',
+      'images/tohoku/羽後町森.JPG',
+      'images/tohoku/羽後町電波塔.JPG',
+      'images/tohoku/羽後町たばこ.JPG',
+      'images/tohoku/羽後町酒屋.JPG',
+      'images/tohoku/羽後町花.JPG',
+      'images/tohoku/羽後町鯉のぼり.JPG',
+      'images/tohoku/羽後町寺.JPG',
+      'images/tohoku/羽後町結晶.JPG',
+      'images/tohoku/羽後町6松.JPG',
+      'images/tohoku/羽後町6竹.JPG',
+      ] 
+ },
 ],
+
+  iwate:[
+ {
+   title:'小岩井農場(Koiwai Farm)',
+    desc:'1891年創業の日本最大級の民営総合農場。約3,000ヘクタールの敷地で酪農、山林事業、種鶏事業などを展開し、その一部は観光エリア「まきば園」として開放されている。<br>Founded in 1891, it is one of the largest private comprehensive farms in Japan. Dairy farming, mountain forest business, and breeding chicken business are developed on a site of about 3,000 hectares, and some of it is open as a tourist area "Makibaen".',
+    chips:['4月','11:56 AM','70-350mm f/4.5-6.3'],
+    imgs:[
+      'images/tohoku/小岩井農場看板.JPG',
+      'images/tohoku/小岩井農場.JPG',
+      'images/tohoku/小岩井農場のぞき見.JPG',
+      'images/tohoku/小岩井農場道.JPG',
+      ]
+ },
+  ],
 　
   miyagi:[
   {
@@ -661,7 +687,11 @@ const jpData = {
     title:'仙台東照宮(Sendai Toshogu Shrine)',
     desc:'1654年に伊達忠宗（仙台藩2代藩主）が創建した、徳川家康公を祀る神社。<br>A shrine dedicated to Tokugawa Ieyasu, founded in 1654 by Tadamune Date (the second lord of the Sendai Domain).',
     chips:['11月','11:36 AM','70-350mm f/4.5-6.3'],
-    img:'images/tohoku/宮城東照宮門構え.JPG', 
+    imgs:[
+      'images/tohoku/宮城東照宮門構え.JPG',
+      'images/tohoku/宮城東照宮シール.JPG',
+      'images/tohoku/宮城東照宮標識.JPG',
+      ]
    },
     {
     title:'結び処(Sacred Knot Spot)',
@@ -729,6 +759,16 @@ const jpData = {
     desc:'41:25「君の名は。」にて。<br>41:25 "Your Name." At.',
     chips:['2月','05:29 PM','70-350mm f/4.5-6.3'],
     img:'images/kanto/信濃.JPG',
+  },
+    {
+    title:'東京駅(Tokyo Station)',
+    desc:'1914年に開業した日本を代表する重要文化財の「赤レンガ駅舎」を持つ歴史あるターミナル駅。<br>A historic terminal station with the "Red Brick Station Building", an important cultural property representing Japan, opened in 1914.',
+    chips:['2月','08:33 PM','70-350mm f/4.5-6.3'],
+    imgs:[
+      'images/kanto/東京駅右.JPG',
+      'images/kanto/東京駅正面.JPG',
+      'images/kanto/東京駅右左ブレ.JPG',
+    ]
   },
 ],
 
@@ -1206,6 +1246,7 @@ document.getElementById('modal-bg').addEventListener('click', e => {
 </script>
 </body>
 </html>
+
 
 
 
